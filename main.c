@@ -3,6 +3,9 @@
  * Author: Renophaston <Renophaston@users.noreply.github.com>
  *
  * Created on July 13, 2014, 8:49 AM
+ * 
+ * TODO: Get filenames from the command line
+ * TODO: check whether files exist (both read and write)
  */
 
 #include <stdio.h>
@@ -88,15 +91,32 @@ int main(int argc, char** argv) {
     const char * infilename = "CurrentGame_AI.Civ5Save";
     const char * outfilename = "out.Civ5Save";
     struct SaveData save_data;
+    FILE * outfile;
+    size_t bytes_written;
     
     read_file(infilename, &save_data);
     
+    /* read in file contents */
     fprintf(stdout, "Read %d bytes into memory.\n", save_data.size);
     
+    /* write out new file */
+    outfile = fopen (outfilename, "w");
+    if (!outfile) {
+        fprintf(stderr, "Unable to open file '%s' for reading: %s\n", outfile, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
     
+    bytes_written = fwrite(save_data.contents, sizeof(save_data.contents[0]), save_data.size, outfile);
+    fclose(outfile);
     
     free (save_data.contents);
     
+    if (bytes_written != save_data.size) {
+        fprintf(stderr, "Error writing '%s'; expected %d bytes but wrote %d: %s\n", outfile, save_data.size, bytes_written, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    
+    fprintf(stdout, "Wrote new file '%s'.", outfilename);
+   
     return (EXIT_SUCCESS);
 }
-
