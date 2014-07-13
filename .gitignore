@@ -21,3 +21,12 @@
 *.i*86
 *.x86_64
 *.hex
+
+# NetBeans
+.dep.inc
+nbproject/private
+build
+dist
+
+# Project specific
+*.Civ5Save
