@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <sys/stat.h>
 
@@ -90,6 +91,8 @@ static int read_file(const char * filename, struct SaveData * save_data) {
  *   1: Save file too small
  *   2: Too many matches
  *   3: Not enough matches
+ * 
+ * TODO: This function is ugly and hackish. More so than the rest, I mean.
  */
 static int make_private(const struct SaveData * save_data) {
     /* We want to find this twice, and replace [7] (0x01) with 0x03 */
@@ -147,7 +150,10 @@ static int make_private(const struct SaveData * save_data) {
         return 3;
     }
     
-    /* START SECOND PATTERN */
+    /*
+     * START SECOND PATTERN
+     */
+    
     /* our current position in the data */
     position = 0;
     /* count the number of occurrences; if it's not two, we've failed */
@@ -191,16 +197,71 @@ static int make_private(const struct SaveData * save_data) {
     return 0;
 }
 
+
+/*
+ * Takes a filename and puts a "_p" before the dot.
+ *   filename.ext -> filename_p.ext
+ * Doesn't do any checking about sizes
+ * Returns zero on success, non-zero on failure.
+ */
+static int gen_outfilename (char * new_filename, const char * original_filename) {
+    /* find the position of the LAST period in the filename. */
+    const char * dot_position = strrchr(original_filename, '.');
+    /* length of the filename minus extension (not including dot) */
+    int filename_length;
+    
+    if (dot_position == NULL) {
+        /* No file extension found. */
+        return 1;
+    }
+    
+    /* copy the filename minus extension into the new string */
+    filename_length = dot_position - original_filename;
+    strncpy(new_filename, original_filename, filename_length);
+    
+    /* copy "_p.Civ5Save" to end of string (and include NULL) */
+    strcpy(new_filename + filename_length, "_p.Civ5Save");
+    
+    return 0;
+}
+
+
 /*
  * 
  */
 int main(int argc, char** argv) {
     
-    const char * infilename = "CurrentGa5Save";
-    const char * outfilename = "out.Civ5Save";
+    char * infilename;
+    char outfilename[256];
     struct SaveData save_data;
     FILE * outfile;
     size_t bytes_written;
+    
+    switch (argc) {
+        case 2:
+            infilename = argv[1];
+            if (strlen(infilename) > 255) {
+                fprintf(stderr, "Whoa, that infile name is way too long.\n");
+                exit(EXIT_FAILURE);
+            }
+            if (gen_outfilename(outfilename, infilename) != 0) {
+                fprintf(stderr, "Problem creating outfile name from %s.\n", infilename);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case 3:
+            infilename = argv[1];
+            strcpy(outfilename, argv[2]);
+            break;
+        default:
+            fprintf(stderr, "Usage: defectivecivsaveprivatizer INFILE [OUTFILE]\n");
+            exit(EXIT_FAILURE);
+    }
+    
+    /* print out what we're going to do */
+    fprintf(stdout, "Using:\n");
+    fprintf(stdout, "   in: %s\n", infilename);
+    fprintf(stdout, "  out: %s\n", outfilename);
     
     read_file(infilename, &save_data);
     
@@ -211,12 +272,14 @@ int main(int argc, char** argv) {
     if (make_private(&save_data) != 0) {
         fprintf(stdout, "Failure identifying bytes to change.\n");
         exit(EXIT_FAILURE);
+    } else {
+        fprintf(stdout, "Found the correct number of matches.\n"); 
     }
     
     /* write out new file */
     outfile = fopen (outfilename, "wb");
     if (!outfile) {
-        fprintf(stderr, "Unable to open file '%s' for reading: %d\n", outfile, errno);
+        fprintf(stderr, "Unable to open file '%s' for writing: %d\n", outfile, errno);
         exit(EXIT_FAILURE);
     }
     
