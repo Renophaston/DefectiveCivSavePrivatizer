@@ -28,7 +28,7 @@ struct SaveData {
 static unsigned int get_file_size(const char * filename) {
     struct stat file_stats;
     if ( stat(filename, &file_stats) != 0 ) {
-        fprintf(stderr, "'stat' failed for '%s': %s.\n", filename, strerror(errno));
+        fprintf(stderr, "'stat' failed for '%s': %d.\n", filename, errno);
         exit(EXIT_FAILURE);
     }
     
@@ -58,20 +58,20 @@ static int read_file(const char * filename, struct SaveData * save_data) {
     
     file = fopen (filename, "rb");
     if (!file) {
-        fprintf(stderr, "Unable to open file '%s' for reading: %s\n", filename, strerror(errno));
+        fprintf(stderr, "Unable to open file '%s' for reading: %d\n", filename, errno);
         exit(EXIT_FAILURE);
     }
     
     bytes_read = fread(contents, sizeof(unsigned char), size, file);
     /* FIXME: comparing unsigned int to size_t. Does that matter? */
     if (bytes_read != size) {
-        fprintf(stderr, "Error reading %s; expected %d bytes but got %d: %s\n", filename, size, bytes_read, strerror(errno));
+        fprintf(stderr, "Error reading %s; expected %d bytes but got %d: %d\n", filename, size, bytes_read, errno);
         exit(EXIT_FAILURE);
     }
     
     status = fclose(file);
     if (status != 0) {
-        fprintf(stderr, "Error closing file %s: %s\n", filename, strerror(errno));
+        fprintf(stderr, "Error closing file %s: %d\n", filename, errno);
         exit(EXIT_FAILURE);
     }
     
@@ -196,7 +196,7 @@ static int make_private(const struct SaveData * save_data) {
  */
 int main(int argc, char** argv) {
     
-    const char * infilename = "111Wu Zetian_0000 BC-4000.Civ5Save";
+    const char * infilename = "CurrentGa5Save";
     const char * outfilename = "out.Civ5Save";
     struct SaveData save_data;
     FILE * outfile;
@@ -216,7 +216,7 @@ int main(int argc, char** argv) {
     /* write out new file */
     outfile = fopen (outfilename, "wb");
     if (!outfile) {
-        fprintf(stderr, "Unable to open file '%s' for reading: %s\n", outfile, strerror(errno));
+        fprintf(stderr, "Unable to open file '%s' for reading: %d\n", outfile, errno);
         exit(EXIT_FAILURE);
     }
     
@@ -226,7 +226,7 @@ int main(int argc, char** argv) {
     free (save_data.contents);
     
     if (bytes_written != save_data.size) {
-        fprintf(stderr, "Error writing '%s'; expected %d bytes but wrote %d: %s\n", outfile, save_data.size, bytes_written, strerror(errno));
+        fprintf(stderr, "Error writing '%s'; expected %d bytes but wrote %d: %d\n", outfile, save_data.size, bytes_written, errno);
         exit(EXIT_FAILURE);
     }
     fprintf(stdout, "Wrote new file '%s'.\n", outfilename);
